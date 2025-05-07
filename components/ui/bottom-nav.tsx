@@ -9,7 +9,10 @@ import {
   List,
   PlusCircle,
   User,
-  BarChart3
+  BarChart3,
+  Gift,
+  Calendar,
+  Users
 } from 'lucide-react';
 
 const navItems = [
@@ -27,6 +30,21 @@ const navItems = [
     href: '/add-game',
     label: 'הוסף',
     icon: <PlusCircle className="h-5 w-5" />,
+  },
+  {
+    href: '/tournaments-schedule',
+    label: 'טורנירים',
+    icon: <Calendar className="h-5 w-5" />,
+  },
+  {
+    href: '/investors',
+    label: 'משקיעים',
+    icon: <Users className="h-5 w-5" />,
+  },
+  {
+    href: '/events',
+    label: 'אירועים',
+    icon: <Gift className="h-5 w-5" />,
   },
   {
     href: '/statistics',

@@ -100,6 +100,45 @@ Chipz כעת כולל ממשק WhatsApp המאפשר למשתמשים לתקשר
    https://your-domain.com/api/whatsapp
    ```
 
+## הגדרת Google Sheets API עבור לוח זמני טורנירים
+
+המערכת משתמשת ב-Google Sheets API כדי לקבל מידע עדכני על לוח זמנים של טורנירים. להגדרת המערכת:
+
+1. צור פרויקט חדש ב-[Google Cloud Console](https://console.cloud.google.com/)
+2. הפעל את Google Sheets API עבור הפרויקט
+3. צור מפתח API חדש:
+   - לך אל 'Credentials' (אישורים)
+   - לחץ על "Create credentials" (צור אישורים) ואז "API key" (מפתח API)
+   - העתק את המפתח שנוצר
+4. הגבל את המפתח לשימוש רק עם Google Sheets API לאבטחה מוגברת
+5. הוסף את המפתח לקובץ `.env.local` כערך עבור `GOOGLE_SHEETS_API_KEY`
+
+### מבנה גיליון Google Sheets
+
+צור גיליון Google עם שני דפים:
+
+1. **דף "Venues"** - רשימת אתרי טורנירים
+   - עמודה A: שם האתר
+   - עמודה B: תאריך התחלה (YYYY-MM-DD)
+   - עמודה C: תאריך סיום (YYYY-MM-DD)
+   - עמודה D: מיקום
+
+2. **דף "Tournaments"** - רשימת טורנירים
+   - עמודה A: שם הטורניר
+   - עמודה B: תאריך (YYYY-MM-DD)
+   - עמודה C: שעה
+   - עמודה D: עלות כניסה (מספר)
+   - עמודה E: סכום מובטח (מספר)
+   - עמודה F: שם האתר (תואם לשמות ב-Venues)
+   - עמודה G: קישור להרשמה
+
+3. הגדר את הגיליון לגישה ציבורית לצפייה:
+   - לחץ על "שתף" בפינה הימנית העליונה
+   - בחר "כל מי שיש לו הקישור"
+   - ודא שההרשאה מוגדרת ל"צופה"
+   - העתק את מזהה הגיליון מה-URL (החלק שבין /d/ ל-/edit)
+   - הוסף את המזהה לקובץ `.env.local` כערך עבור `TOURNAMENTS_SPREADSHEET_ID`
+
 ## 📝 רישיון
 
 פרויקט זה מורשה תחת רישיון MIT. ראה את קובץ `LICENSE` לפרטים.

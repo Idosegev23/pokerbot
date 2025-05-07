@@ -219,6 +219,28 @@ export default function ProtectedLayout({ children }: PropsWithChildren) {
                   משחקים
                 </Link>
                 <Link 
+                  href="/tournaments-schedule" 
+                  className={cn(
+                    "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isNavLink('/tournaments-schedule') 
+                      ? "bg-card text-card-foreground" 
+                      : "text-foreground/70 hover:text-foreground hover:bg-card/30"
+                  )}
+                >
+                  לוח טורנירים
+                </Link>
+                <Link 
+                  href="/investors" 
+                  className={cn(
+                    "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isNavLink('/investors') 
+                      ? "bg-card text-card-foreground" 
+                      : "text-foreground/70 hover:text-foreground hover:bg-card/30"
+                  )}
+                >
+                  משקיעים
+                </Link>
+                <Link 
                   href="/statistics" 
                   className={cn(
                     "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",

@@ -15,7 +15,10 @@ import {
   BarChart3,
   Search,
   HelpCircle,
-  Info
+  Info,
+  Calendar,
+  Users,
+  Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabase } from '@/components/providers/supabase-provider';
@@ -46,6 +49,24 @@ const menuItems: MenuItem[] = [
     href: '/add-game',
     title: 'הוסף משחק',
     icon: <PlusCircle className="h-5 w-5" />,
+    type: 'link'
+  },
+  {
+    href: '/events',
+    title: 'אירועים',
+    icon: <Gift className="h-5 w-5" />,
+    type: 'link'
+  },
+  {
+    href: '/investors',
+    title: 'משקיעים',
+    icon: <Users className="h-5 w-5" />,
+    type: 'link'
+  },
+  {
+    href: '/tournaments-schedule',
+    title: 'לוח זמנים טורנירים',
+    icon: <Calendar className="h-5 w-5" />,
     type: 'link'
   },
   {

@@ -21,6 +21,33 @@ export interface GameModel {
   cash_out: number;
   notes: string | null;
   created_at: string;
+  event_id: string | null; // מזהה האירוע שאליו משויך המשחק
+  investor_ids: string[] | null; // מזהי המשקיעים ששותפים במשחק
+}
+
+// מודל אירוע מיוחד
+export interface EventModel {
+  id: string;
+  user_id: string;
+  name: string; // שם האירוע (כמו "WSOP 2025", "טיול פוקר באילת")
+  start_date: string; 
+  end_date: string;
+  location: string;
+  description: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+// מודל משקיע
+export interface InvestorModel {
+  id: string;
+  user_id: string; // המשתמש שיצר את המשקיע
+  name: string;
+  email: string;
+  phone: string | null;
+  stake_percentage: number; // אחוז ההשקעה (0-100)
+  notes: string | null;
+  created_at: string;
 }
 
 // המרה בין טיפוס המשחק במודל לטיפוס במערכת
@@ -171,4 +198,100 @@ export function calculateTotalHours(games: GameModel[]): number {
 export function calculateAverageProfit(games: GameModel[]): number {
   if (games.length === 0) return 0;
   return calculateTotalProfit(games) / games.length;
+}
+
+/**
+ * פונקציה לשליפת כל האירועים של המשתמש
+ */
+export async function fetchUserEvents(userId: string): Promise<EventModel[]> {
+  const supabase = createClientSupabase();
+  
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false });
+    
+  if (error) {
+    console.error('שגיאה בשליפת אירועים:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+/**
+ * פונקציה לשליפת אירוע לפי מזהה
+ */
+export async function fetchEventById(eventId: string): Promise<EventModel | null> {
+  const supabase = createClientSupabase();
+  
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('id', eventId)
+    .single();
+    
+  if (error) {
+    console.error('שגיאה בשליפת אירוע לפי מזהה:', error);
+    return null;
+  }
+  
+  return data || null;
+}
+
+/**
+ * פונקציה לשליפת משחקים השייכים לאירוע מסוים
+ */
+export async function fetchGamesByEvent(eventId: string): Promise<GameModel[]> {
+  const supabase = createClientSupabase();
+  
+  const { data, error } = await supabase
+    .from('games')
+    .select('*')
+    .eq('event_id', eventId)
+    .order('date', { ascending: true });
+    
+  if (error) {
+    console.error('שגיאה בשליפת משחקים לפי אירוע:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+/**
+ * פונקציה לשליפת כל המשקיעים של המשתמש
+ */
+export async function fetchUserInvestors(userId: string): Promise<InvestorModel[]> {
+  const supabase = createClientSupabase();
+  
+  const { data, error } = await supabase
+    .from('investors')
+    .select('*')
+    .eq('user_id', userId)
+    .order('name', { ascending: true });
+    
+  if (error) {
+    console.error('שגיאה בשליפת משקיעים:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+/**
+ * פונקציה לחישוב הרווח הכולל של אירוע
+ */
+export async function calculateEventProfit(eventId: string): Promise<number> {
+  const games = await fetchGamesByEvent(eventId);
+  return calculateTotalProfit(games);
+}
+
+/**
+ * פונקציה לחישוב סך שעות משחק באירוע
+ */
+export async function calculateEventHours(eventId: string): Promise<number> {
+  const games = await fetchGamesByEvent(eventId);
+  return calculateTotalHours(games);
 } 
