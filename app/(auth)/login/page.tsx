@@ -19,8 +19,6 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   // בדיקת סשן ושגיאות בטעינת הדף
   useEffect(() => {
@@ -82,39 +80,6 @@ export default function Login() {
       }
 
       // ההפניה תתבצע אוטומטית על ידי supabase
-    } catch (error: any) {
-      setError(error.message || 'אירעה שגיאה בתהליך ההתחברות');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // פונקציה להתחברות עם אימייל וסיסמה
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      setError('יש להזין אימייל וסיסמה');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success("התחברת בהצלחה!");
-      
-      // הפנייה לדשבורד
-      router.push('/dashboard');
     } catch (error: any) {
       setError(error.message || 'אירעה שגיאה בתהליך ההתחברות');
     } finally {
@@ -186,86 +151,23 @@ export default function Login() {
             </motion.div>
           )}
 
-          {/* טופס התחברות עם אימייל וסיסמה */}
-          <motion.form 
-            onSubmit={handleEmailLogin}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground/90 flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                אימייל
-              </Label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="example@mail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-secondary/50 border-secondary text-foreground rounded-xl py-6"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground/90 flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                סיסמה
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="********"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-secondary/50 border-secondary text-foreground rounded-xl py-6"
-                  disabled={isLoading}
-                  autoComplete="current-password"
-                />
-              </div>
-            </div>
-            
-            <Button 
-              type="submit"
-              disabled={isLoading} 
-              className="w-full bg-accent hover:bg-accent/90 text-primary text-lg font-medium py-6 rounded-xl transition-all shadow-lg"
-            >
-              {isLoading ? 'מתחבר...' : 'התחבר'}
-            </Button>
-          </motion.form>
-          
-          {/* מפריד */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-accent/20"></div>
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-4 text-foreground/60">או התחבר עם</span>
-            </div>
-          </div>
-
           {/* כפתור התחברות Google */}
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-4"
           >
             <Button 
               onClick={handleGoogleLogin}
               disabled={isLoading} 
-              className="w-full flex items-center justify-center space-x-2 space-x-reverse bg-white hover:bg-gray-50 text-gray-800 text-lg font-medium py-5 rounded-xl transition-all shadow-lg"
+              className="w-full flex items-center justify-center space-x-2 space-x-reverse bg-white hover:bg-gray-50 text-gray-800 text-lg font-medium py-6 rounded-xl transition-all shadow-lg"
             >
               <Image 
                 src="/google-icon.svg" 
                 alt="Google" 
-                width={22} 
-                height={22} 
+                width={24} 
+                height={24} 
               />
               <span className="mr-2 flex items-center">
                 התחבר עם Google
@@ -273,16 +175,13 @@ export default function Login() {
             </Button>
           </motion.div>
           
-          {/* הרשמה וחזרה לדף הבית */}
+          {/* חזרה לדף הבית */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            className="text-center pt-2 space-y-2"
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="text-center pt-6"
           >
-            <p className="text-foreground/70 text-sm">
-              אין לך חשבון? <Link href="/register" className="text-accent hover:underline font-medium">הירשם כאן</Link>
-            </p>
             <Link 
               href="/" 
               className="text-foreground/70 text-sm hover:text-accent inline-flex items-center transition-colors"

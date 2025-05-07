@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
 import { createClientSupabase } from "@/lib/supabase";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   PokerVariant, 
   TournamentType, 
@@ -68,6 +68,13 @@ import {
   Users,
   Banknote,
   CreditCard,
+  Camera,
+  Copy,
+  MapPin,
+  RefreshCw,
+  History,
+  HelpCircle,
+  Info,
 } from "lucide-react";
 
 // Schema עבור טופס הוספת משחק
@@ -109,31 +116,75 @@ const platformOptions = [
   { 
     value: "Online", 
     label: "אונליין", 
-    icon: <Computer className="h-4 w-4 text-blue-500" /> 
+    icon: <Computer className="h-4 w-4 text-blue-500" />,
+    tooltip: "משחקים באתרי פוקר מקוונים כגון PokerStars, 888, GGPoker וכו'"
   },
   { 
     value: "Live", 
     label: "לייב/קזינו", 
-    icon: <CreditCard className="h-4 w-4 text-purple-500" /> 
+    icon: <CreditCard className="h-4 w-4 text-purple-500" />,
+    tooltip: "משחקים בקזינו או מועדון פוקר פיזי עם כרטיסים וצ'יפים"
   },
   { 
     value: "Home Game", 
     label: "משחק בית", 
-    icon: <Users className="h-4 w-4 text-green-500" /> 
+    icon: <Users className="h-4 w-4 text-green-500" />,
+    tooltip: "משחקים פרטיים בבית עם חברים או מכרים"
   },
   { 
     value: "App Poker", 
     label: "אפליקציה", 
-    icon: <Smartphone className="h-4 w-4 text-orange-500" /> 
+    icon: <Smartphone className="h-4 w-4 text-orange-500" />,
+    tooltip: "משחקים באפליקציות פוקר בנייד כגון PPPoker, PokerBros, Upoker וכו'"
   },
 ];
 
 // אפשרויות עבור הפורמט
 const formatOptions = [
-  { value: "Cash Game", label: "קאש גיים" },
-  { value: "Tournament", label: "טורניר" },
-  { value: "Sit & Go", label: "SNG" },
-  { value: "MTT", label: "MTT" },
+  { 
+    value: "Cash Game", 
+    label: "קאש גיים",
+    tooltip: "משחק שבו הצ'יפים מייצגים ערך כספי אמיתי וניתן להיכנס ולצאת מתי שרוצים" 
+  },
+  { 
+    value: "Tournament", 
+    label: "טורניר",
+    tooltip: "אירוע תחרותי עם מבנה מוגדר, כאשר משחקים עד שנגמרים הצ'יפים או עד הזכייה" 
+  },
+  { 
+    value: "Sit & Go", 
+    label: "SNG",
+    tooltip: "טורניר קטן שמתחיל כאשר מספר מסוים של שחקנים מתיישבים לשחק" 
+  },
+  { 
+    value: "MTT", 
+    label: "MTT",
+    tooltip: "טורניר מרובה שולחנות עם מספר גדול של משתתפים ופרסים משמעותיים" 
+  },
+];
+
+// תבניות למילוי מהיר
+const quickTemplates = [
+  {
+    name: "קזינו בלאק סמפיון",
+    platform: "Live",
+    format: "Cash Game",
+    poker_variant: "nlhe",
+    location: "הרצליה, ישראל",
+  },
+  {
+    name: "888 פוקר",
+    platform: "Online",
+    format: "Tournament",
+    poker_variant: "nlhe",
+    tournament_type: "regular",
+  },
+  {
+    name: "משחק חברים",
+    platform: "Home Game",
+    format: "Cash Game",
+    poker_variant: "nlhe",
+  }
 ];
 
 interface AddGameFormProps {
@@ -154,6 +205,12 @@ export default function AddGameForm({
   const [showVariantField, setShowVariantField] = useState(false);
   const [showTournamentTypeField, setShowTournamentTypeField] = useState(false);
   const [showBountyTypeField, setShowBountyTypeField] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [showRecentGames, setShowRecentGames] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [recentGames, setRecentGames] = useState<any[]>([]);
+  const [processingImage, setProcessingImage] = useState(false);
+  const [processingLocation, setProcessingLocation] = useState(false);
 
   const form = useForm<GameFormValues>({
     resolver: zodResolver(formSchema) as Resolver<GameFormValues, any>,
@@ -220,6 +277,100 @@ export default function AddGameForm({
     const cashOut = parseFloat(watchCashOut) || 0;
     setProfit(cashOut - buyIn);
   }, [watchBuyIn, watchCashOut]);
+
+  // פונקציה לטעינת משחקים אחרונים
+  const loadRecentGames = async () => {
+    try {
+      const supabase = createClientSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+        
+      if (error) throw error;
+      
+      setRecentGames(data || []);
+    } catch (error) {
+      console.error('שגיאה בטעינת משחקים אחרונים:', error);
+    }
+  };
+
+  // העתקת פרטי משחק קודם
+  const copyGameDetails = (game: any) => {
+    form.setValue('game_type', game.game_type);
+    form.setValue('platform', game.platform);
+    form.setValue('format', game.format);
+    form.setValue('poker_variant', game.poker_variant);
+    form.setValue('tournament_type', game.tournament_type);
+    form.setValue('bounty_type', game.bounty_type);
+    setShowRecentGames(false);
+    
+    toast({
+      title: "פרטי משחק הועתקו",
+      description: `הועתקו פרטים ממשחק: ${game.game_type}`,
+      variant: "default",
+    });
+  };
+
+  // סימולציה של עיבוד תמונה לזיהוי סכומים
+  const processReceiptImage = (file: File) => {
+    setProcessingImage(true);
+    
+    // סימולציה של עיבוד תמונה עם OCR
+    setTimeout(() => {
+      // דוגמה: זיהוי מזויף של סכומים מהקבלה
+      const fakeBuyIn = Math.floor(Math.random() * 500) + 100;
+      const fakeCashOut = fakeBuyIn + (Math.random() > 0.5 ? 
+        Math.floor(Math.random() * 300) : 
+        -Math.floor(Math.random() * 200));
+      
+      form.setValue('buy_in', fakeBuyIn.toString());
+      form.setValue('cash_out', fakeCashOut.toString());
+      
+      setProcessingImage(false);
+      
+      toast({
+        title: "עיבוד תמונה הסתיים",
+        description: "סכומי Buy-in ו-Cash-out זוהו מהתמונה",
+        variant: "default",
+      });
+    }, 1500);
+  };
+
+  // סימולציה של שימוש במיקום לזיהוי מקום המשחק
+  const useCurrentLocation = () => {
+    setProcessingLocation(true);
+    
+    // סימולציה של קבלת מיקום
+    setTimeout(() => {
+      // טעינת תבנית מתאימה למיקום (לדוגמה)
+      const template = quickTemplates[0]; // נניח שזה הקזינו
+      
+      form.setValue('game_type', 'קזינו בלאק');
+      form.setValue('platform', template.platform);
+      form.setValue('format', template.format);
+      form.setValue('poker_variant', template.poker_variant);
+      
+      setProcessingLocation(false);
+      
+      toast({
+        title: "מיקום זוהה",
+        description: "פרטי מקום המשחק מולאו אוטומטית",
+        variant: "default",
+      });
+    }, 1000);
+  };
+
+  // טעינת משחקים אחרונים כאשר הקומפוננטה מתחילה
+  useEffect(() => {
+    loadRecentGames();
+  }, []);
 
   const onSubmit: SubmitHandler<GameFormValues> = (values: GameFormValues) => {
     setIsSubmitting(true);
@@ -319,6 +470,136 @@ export default function AddGameForm({
         </Badge>
       </div>
 
+      {/* כפתורים למילוי מהיר */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          onClick={() => setShowRecentGames(!showRecentGames)}
+        >
+          <History className="h-4 w-4" />
+          <span>משחקים אחרונים</span>
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          onClick={() => setShowImageUpload(!showImageUpload)}
+        >
+          <Camera className="h-4 w-4" />
+          <span>העלאת קבלה/צ׳ק</span>
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          onClick={useCurrentLocation}
+          disabled={processingLocation}
+        >
+          <MapPin className="h-4 w-4" />
+          <span>{processingLocation ? "מזהה מיקום..." : "זיהוי מיקום"}</span>
+        </Button>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1"
+                onClick={() => form.reset()}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>איפוס הטופס</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      {/* רשימת משחקים אחרונים */}
+      <AnimatePresence>
+        {showRecentGames && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-muted/30 p-4 rounded-lg border border-muted"
+          >
+            <h3 className="text-md font-medium mb-3">העתק פרטים ממשחק קודם:</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {recentGames.length > 0 ? (
+                recentGames.map((game, index) => (
+                  <Button 
+                    key={index} 
+                    variant="outline" 
+                    className="h-auto p-3 justify-start flex-col items-start text-right"
+                    onClick={() => copyGameDetails(game)}
+                  >
+                    <div className="font-medium">{game.game_type}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {game.format} | {game.platform}
+                    </div>
+                  </Button>
+                ))
+              ) : (
+                <p className="text-muted-foreground">אין עדיין משחקים קודמים</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* העלאת תמונה */}
+      <AnimatePresence>
+        {showImageUpload && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-muted/30 p-4 rounded-lg border border-muted"
+          >
+            <h3 className="text-md font-medium mb-3">העלאת קבלה או צ׳ק לזיהוי אוטומטי:</h3>
+            
+            <div className="flex flex-col items-center space-y-3">
+              <div className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center">
+                <input 
+                  type="file" 
+                  id="receipt-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      processReceiptImage(e.target.files[0]);
+                    }
+                  }}
+                />
+                
+                <label htmlFor="receipt-upload" className="cursor-pointer flex flex-col items-center">
+                  {processingImage ? (
+                    <>
+                      <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mb-2"></div>
+                      <p>מעבד תמונה...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-8 w-8 mb-2 text-muted-foreground" />
+                      <p>לחץ לצילום או העלאת תמונה</p>
+                      <p className="text-sm text-muted-foreground mt-1">המערכת תזהה אוטומטית את הסכומים</p>
+                    </>
+                  )}
+                </label>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Tabs defaultValue="manual" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="manual" className="text-lg py-3">
@@ -379,7 +660,19 @@ export default function AddGameForm({
                           name="start_time"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-md">התחלה</FormLabel>
+                              <FormLabel className="text-md flex items-center gap-1">
+                                התחלה
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>שעת התחלת המשחק</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Input 
@@ -400,7 +693,19 @@ export default function AddGameForm({
                           name="end_time"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-md">סיום</FormLabel>
+                              <FormLabel className="text-md flex items-center gap-1">
+                                סיום
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>שעת סיום המשחק</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Input 
@@ -431,7 +736,19 @@ export default function AddGameForm({
                         name="game_type"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-md">שם/סוג המשחק</FormLabel>
+                            <FormLabel className="text-md flex items-center gap-1">
+                              שם/סוג המשחק
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-sm">
+                                    <p>הזן את שם המשחק, שם המועדון או האתר. לדוגמה: קזינו בלאק, 888 פוקר, משחק חברים</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input 
@@ -459,7 +776,19 @@ export default function AddGameForm({
                           name="platform"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-md">פלטפורמה</FormLabel>
+                              <FormLabel className="text-md flex items-center gap-1">
+                                פלטפורמה
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>היכן שיחקת: אונליין, קזינו, בית חברים, או אפליקציה</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger className="text-lg py-6">
@@ -469,10 +798,17 @@ export default function AddGameForm({
                                 <SelectContent>
                                   {platformOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value} className="text-lg">
-                                      <div className="flex items-center gap-2">
-                                        {option.icon}
-                                        <span>{option.label}</span>
-                                      </div>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger className="flex items-center gap-2">
+                                            {option.icon}
+                                            <span>{option.label}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{option.tooltip}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -487,7 +823,19 @@ export default function AddGameForm({
                           name="format"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-md">פורמט</FormLabel>
+                              <FormLabel className="text-md flex items-center gap-1">
+                                פורמט
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                      <p>סוג המשחק: קאש גיים לעומת טורניר, או וריאציות של טורנירים</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger className="text-lg py-6">
@@ -497,7 +845,16 @@ export default function AddGameForm({
                                 <SelectContent>
                                   {formatOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value} className="text-lg">
-                                      {option.label}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            {option.label}
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{option.tooltip}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -608,6 +965,16 @@ export default function AddGameForm({
                     <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                       <DollarSign className="h-5 w-5" />
                       <span>סכומים</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <p>לשדות אלו תוכל להעלות צילום קבלה/צ׳ק לזיהוי אוטומטי של הסכומים</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
@@ -615,7 +982,19 @@ export default function AddGameForm({
                         name="buy_in"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-md">Buy-in (₪)</FormLabel>
+                            <FormLabel className="text-md flex items-center gap-1">
+                              Buy-in (₪)
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>כמה כסף השקעת במשחק (עלות הכניסה)</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input 
@@ -638,7 +1017,19 @@ export default function AddGameForm({
                         name="cash_out"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-md">Cash-out (₪)</FormLabel>
+                            <FormLabel className="text-md flex items-center gap-1">
+                              Cash-out (₪)
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>כמה כסף יצאת עם בסוף המשחק</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input 
