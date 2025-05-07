@@ -620,7 +620,7 @@ export default function TournamentsSchedulePage({ scheduleData }: TournamentsSch
                         registered: (date) => {
                           const dateStr = format(date, 'yyyy-MM-dd');
                           const dayTournaments = calendarData.tournamentsDateMap.get(dateStr) || [];
-                          return dayTournaments.some(t => isRegistered(t.id));
+                          return dayTournaments.some((t: Tournament) => isRegistered(t.id));
                         }
                       }}
                       modifiersClassNames={{

@@ -81,7 +81,14 @@ export default function EventsPage({ events }: EventsPageProps) {
     setIsSubmitting(true);
     
     try {
-      const eventId = await createEvent(values);
+      // המרת מחרוזות ריקות ל-null עבור שדות אופציונליים
+      const eventData = {
+        ...values,
+        description: values.description === "" ? null : values.description || null,
+        notes: values.notes === "" ? null : values.notes || null,
+      };
+      
+      const eventId = await createEvent(eventData);
       if (eventId) {
         toast({
           title: "האירוע נוצר בהצלחה",
@@ -268,7 +275,7 @@ export default function EventsPage({ events }: EventsPageProps) {
                     <FormItem>
                       <FormLabel>תיאור (אופציונלי)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="תיאור האירוע" {...field} />
+                        <Textarea placeholder="תיאור האירוע" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -281,7 +288,7 @@ export default function EventsPage({ events }: EventsPageProps) {
                     <FormItem>
                       <FormLabel>הערות (אופציונלי)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="הערות נוספות" {...field} />
+                        <Textarea placeholder="הערות נוספות" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
