@@ -187,6 +187,14 @@ const quickTemplates = [
   }
 ];
 
+// דוגמאות לשמות משחקים נפוצים
+const commonGameExamples = [
+  { type: "Online", examples: ["פוקרסטארס טורניר $22", "888 קאש 0.5/1", "GGPoker Bounty Hunter"] },
+  { type: "Live", examples: ["קזינו בלאק 5/10 NL", "סמפיון הרצליה", "ספא קיסריה 2/5"] },
+  { type: "Home Game", examples: ["משחק חברים אצל דני", "ליגת הפוקר השכונתית", "ערב פוקר עם העבודה"] },
+  { type: "App Poker", examples: ["PPPoker קלאב 12345", "PokerBros טורניר", "UPoker קאש 2/5"] },
+];
+
 interface AddGameFormProps {
   recentGameTypes: string[];
   pokerVariants: PokerVariant[];
@@ -211,6 +219,8 @@ export default function AddGameForm({
   const [recentGames, setRecentGames] = useState<any[]>([]);
   const [processingImage, setProcessingImage] = useState(false);
   const [processingLocation, setProcessingLocation] = useState(false);
+  const [gameNameExamples, setGameNameExamples] = useState<string[]>([]);
+  const [submissionAttempt, setSubmissionAttempt] = useState(false);
 
   const form = useForm<GameFormValues>({
     resolver: zodResolver(formSchema) as Resolver<GameFormValues, any>,
@@ -277,6 +287,13 @@ export default function AddGameForm({
     const cashOut = parseFloat(watchCashOut) || 0;
     setProfit(cashOut - buyIn);
   }, [watchBuyIn, watchCashOut]);
+
+  // עדכון דוגמאות שם המשחק כאשר הפלטפורמה משתנה
+  useEffect(() => {
+    const platformValue = form.watch("platform");
+    const examples = commonGameExamples.find(item => item.type === platformValue)?.examples || [];
+    setGameNameExamples(examples);
+  }, [form.watch("platform")]);
 
   // פונקציה לטעינת משחקים אחרונים
   const loadRecentGames = async () => {
@@ -374,6 +391,7 @@ export default function AddGameForm({
 
   const onSubmit: SubmitHandler<GameFormValues> = (values: GameFormValues) => {
     setIsSubmitting(true);
+    setSubmissionAttempt(true);
     
     // שמירת המשחק בסופהבייס
     const saveGame = async () => {
@@ -391,6 +409,11 @@ export default function AddGameForm({
         // המרת ערכים מספריים
         const buyIn = parseFloat(values.buy_in);
         const cashOut = parseFloat(values.cash_out);
+        
+        // וידוא תקינות הערכים
+        if (isNaN(buyIn) || isNaN(cashOut)) {
+          throw new Error('נא להזין ערכים מספריים תקינים');
+        }
         
         // שמירת המשחק במסד הנתונים
         const { data, error } = await supabase
@@ -437,11 +460,11 @@ export default function AddGameForm({
           window.location.href = '/dashboard';
         }, 1500);
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('שגיאה בשמירת משחק:', error);
         toast({
           title: "שגיאה בשמירת המשחק",
-          description: "אירעה שגיאה בשמירת המשחק. אנא נסה שוב.",
+          description: error.message || "אירעה שגיאה בשמירת המשחק. אנא נסה שוב.",
           variant: "destructive",
         });
         setIsSubmitting(false);
@@ -644,11 +667,17 @@ export default function AddGameForm({
                                   type="date" 
                                   placeholder="בחר תאריך" 
                                   {...field} 
-                                  className="pr-10 text-lg py-6"
+                                  className="pr-10 text-lg py-6 bg-white"
                                 />
                                 <Calendar className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                               </div>
                             </FormControl>
+                            <FormDescription className="text-sm mt-1">
+                              בחר את התאריך בו התקיים המשחק
+                            </FormDescription>
+                            {submissionAttempt && !field.value && (
+                              <p className="text-sm text-red-500 mt-1">יש לבחור תאריך</p>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -667,7 +696,7 @@ export default function AddGameForm({
                                     <TooltipTrigger>
                                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                     </TooltipTrigger>
-                                    <TooltipContent>
+                                    <TooltipContent className="bg-white shadow-lg p-2 border" sideOffset={5}>
                                       <p>שעת התחלת המשחק</p>
                                     </TooltipContent>
                                   </Tooltip>
@@ -678,11 +707,14 @@ export default function AddGameForm({
                                   <Input 
                                     type="time" 
                                     {...field} 
-                                    className="pr-10 text-lg py-6"
+                                    className="pr-10 text-lg py-6 bg-white"
                                   />
                                   <Clock className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                                 </div>
                               </FormControl>
+                              {submissionAttempt && !field.value && (
+                                <p className="text-sm text-red-500 mt-1">יש להזין שעת התחלה</p>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
@@ -700,7 +732,7 @@ export default function AddGameForm({
                                     <TooltipTrigger>
                                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                     </TooltipTrigger>
-                                    <TooltipContent>
+                                    <TooltipContent className="bg-white shadow-lg p-2 border" sideOffset={5}>
                                       <p>שעת סיום המשחק</p>
                                     </TooltipContent>
                                   </Tooltip>
@@ -711,15 +743,60 @@ export default function AddGameForm({
                                   <Input 
                                     type="time" 
                                     {...field} 
-                                    className="pr-10 text-lg py-6"
+                                    className="pr-10 text-lg py-6 bg-white"
                                   />
                                   <Clock className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                                 </div>
                               </FormControl>
+                              {submissionAttempt && !field.value && (
+                                <p className="text-sm text-red-500 mt-1">יש להזין שעת סיום</p>
+                              )}
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+                      </div>
+                    </div>
+                    
+                    {/* שיפור חווית משתמש - מילוי שעות בצורה מהירה */}
+                    <div className="mt-4 pt-3 border-t border-muted">
+                      <p className="text-sm text-muted-foreground mb-2">מילוי מהיר:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            form.setValue("start_time", "20:00");
+                            form.setValue("end_time", "00:00");
+                          }}
+                        >
+                          ערב 20:00-00:00
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            form.setValue("start_time", "14:00");
+                            form.setValue("end_time", "18:00");
+                          }}
+                        >
+                          צהריים 14:00-18:00
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const now = new Date();
+                            form.setValue("date", format(now, 'yyyy-MM-dd'));
+                            form.setValue("start_time", format(new Date(now.getTime() - 3*60*60*1000), 'HH:mm'));
+                            form.setValue("end_time", format(now, 'HH:mm'));
+                          }}
+                        >
+                          היום (3 שעות)
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -737,14 +814,19 @@ export default function AddGameForm({
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-md flex items-center gap-1">
-                              שם/סוג המשחק
+                              שם המשחק
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
-                                  <TooltipContent className="max-w-sm">
-                                    <p>הזן את שם המשחק, שם המועדון או האתר. לדוגמה: קזינו בלאק, 888 פוקר, משחק חברים</p>
+                                  <TooltipContent className="max-w-sm bg-white shadow-lg p-2 border" sideOffset={5}>
+                                    <p className="mb-2 font-medium">מה להזין כאן?</p>
+                                    <ul className="list-disc list-inside text-sm space-y-1">
+                                      <li>שם המועדון או האתר</li>
+                                      <li>פרטים ספציפיים על המשחק או הטורניר</li>
+                                      <li>כל מידע שיעזור לך לזהות את המשחק בהמשך</li>
+                                    </ul>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -752,7 +834,9 @@ export default function AddGameForm({
                             <FormControl>
                               <div className="relative">
                                 <Input 
-                                  placeholder="לדוגמה: קזינו בלאק, 888 פוקר, משחק חברים" 
+                                  placeholder={gameNameExamples.length > 0 ? 
+                                    `לדוגמה: ${gameNameExamples.join(', ')}` : 
+                                    "הזן שם מזהה למשחק"} 
                                   {...field} 
                                   className="text-lg py-6"
                                   list="recent-game-types"
@@ -764,6 +848,12 @@ export default function AddGameForm({
                                 </datalist>
                               </div>
                             </FormControl>
+                            <FormDescription className="text-sm mt-2">
+                              הזן שם שיעזור לך לזהות את המשחק הזה בעתיד. למשל: 
+                              {gameNameExamples.length > 0 && (
+                                <span className="font-medium"> {gameNameExamples[0]}</span>
+                              )}
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -783,36 +873,41 @@ export default function AddGameForm({
                                     <TooltipTrigger>
                                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                     </TooltipTrigger>
-                                    <TooltipContent>
+                                    <TooltipContent className="bg-white shadow-lg p-2 border" sideOffset={5}>
                                       <p>היכן שיחקת: אונליין, קזינו, בית חברים, או אפליקציה</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               </FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={(val) => {
+                                field.onChange(val);
+                                // איפוס שדה שם המשחק כאשר משנים פלטפורמה במקרה שהמשתמש מעוניין
+                                if (form.getValues("game_type") === "") {
+                                  const example = commonGameExamples.find(item => item.type === val)?.examples[0];
+                                  if (example) {
+                                    // לא להציב ערך אלא רק להציג דוגמה בפלייסהולדר
+                                  }
+                                }
+                              }} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="text-lg py-6">
+                                  <SelectTrigger className="text-lg py-6 bg-white">
                                     <SelectValue placeholder="בחר פלטפורמה" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-white">
                                   {platformOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value} className="text-lg">
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger className="flex items-center gap-2">
-                                            {option.icon}
-                                            <span>{option.label}</span>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>{option.tooltip}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
+                                      <div className="flex items-center gap-2">
+                                        {option.icon}
+                                        <span>{option.label}</span>
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
+                              <FormDescription className="text-sm mt-1">
+                                {platformOptions.find(o => o.value === field.value)?.tooltip}
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -830,7 +925,7 @@ export default function AddGameForm({
                                     <TooltipTrigger>
                                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                     </TooltipTrigger>
-                                    <TooltipContent className="max-w-sm">
+                                    <TooltipContent className="max-w-sm bg-white shadow-lg p-2 border" sideOffset={5}>
                                       <p>סוג המשחק: קאש גיים לעומת טורניר, או וריאציות של טורנירים</p>
                                     </TooltipContent>
                                   </Tooltip>
@@ -838,27 +933,21 @@ export default function AddGameForm({
                               </FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="text-lg py-6">
+                                  <SelectTrigger className="text-lg py-6 bg-white">
                                     <SelectValue placeholder="בחר פורמט" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-white">
                                   {formatOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value} className="text-lg">
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger>
-                                            {option.label}
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>{option.tooltip}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
+                                      {option.label}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
+                              <FormDescription className="text-sm mt-1">
+                                {formatOptions.find(o => o.value === field.value)?.tooltip}
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -875,11 +964,11 @@ export default function AddGameForm({
                               <FormLabel className="text-md">וריאנט פוקר</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="text-lg py-6">
+                                  <SelectTrigger className="text-lg py-6 bg-white">
                                     <SelectValue placeholder="בחר וריאנט פוקר" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-white">
                                   {pokerVariants.map((variant) => (
                                     <SelectItem key={variant.id} value={variant.id} className="text-lg">
                                       <div className="flex items-center gap-2">
@@ -906,11 +995,11 @@ export default function AddGameForm({
                               <FormLabel className="text-md">סוג טורניר</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="text-lg py-6">
+                                  <SelectTrigger className="text-lg py-6 bg-white">
                                     <SelectValue placeholder="בחר סוג טורניר" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-white">
                                   {tournamentTypes.map((type) => (
                                     <SelectItem key={type.id} value={type.id} className="text-lg">
                                       <div className="flex items-center gap-2">
@@ -937,11 +1026,11 @@ export default function AddGameForm({
                               <FormLabel className="text-md">סוג באונטי</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="text-lg py-6">
+                                  <SelectTrigger className="text-lg py-6 bg-white">
                                     <SelectValue placeholder="בחר סוג באונטי" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-white">
                                   {bountyTypes.map((type) => (
                                     <SelectItem key={type.id} value={type.id} className="text-lg">
                                       <div className="flex items-center gap-2">
@@ -970,7 +1059,7 @@ export default function AddGameForm({
                           <TooltipTrigger>
                             <Info className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-sm">
+                          <TooltipContent className="bg-white shadow-lg p-2 border" sideOffset={5}>
                             <p>לשדות אלו תוכל להעלות צילום קבלה/צ׳ק לזיהוי אוטומטי של הסכומים</p>
                           </TooltipContent>
                         </Tooltip>
@@ -989,7 +1078,7 @@ export default function AddGameForm({
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
-                                  <TooltipContent>
+                                  <TooltipContent className="bg-white shadow-lg p-2 border" sideOffset={5}>
                                     <p>כמה כסף השקעת במשחק (עלות הכניסה)</p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1001,12 +1090,29 @@ export default function AddGameForm({
                                   type="number" 
                                   placeholder="0" 
                                   {...field} 
-                                  className="text-lg py-6"
+                                  className="text-lg py-6 bg-white"
                                   min="0"
+                                  step="10"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    // בדיקה אם הערך תקין
+                                    const value = e.target.value;
+                                    if (value && !isNaN(parseFloat(value)) && parseFloat(value) < 0) {
+                                      form.setError("buy_in", {
+                                        type: "manual",
+                                        message: "ערך Buy-in לא יכול להיות שלילי"
+                                      });
+                                    } else {
+                                      form.clearErrors("buy_in");
+                                    }
+                                  }}
                                 />
                                 <DollarSign className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                               </div>
                             </FormControl>
+                            <FormDescription className="text-sm mt-1">
+                              סכום הכניסה למשחק או סכום הקנייה הראשונית
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1024,7 +1130,7 @@ export default function AddGameForm({
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
-                                  <TooltipContent>
+                                  <TooltipContent className="bg-white shadow-lg p-2 border" sideOffset={5}>
                                     <p>כמה כסף יצאת עם בסוף המשחק</p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1036,12 +1142,29 @@ export default function AddGameForm({
                                   type="number" 
                                   placeholder="0" 
                                   {...field} 
-                                  className="text-lg py-6"
+                                  className="text-lg py-6 bg-white"
                                   min="0"
+                                  step="10"
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    // בדיקה אם הערך תקין
+                                    const value = e.target.value;
+                                    if (value && !isNaN(parseFloat(value)) && parseFloat(value) < 0) {
+                                      form.setError("cash_out", {
+                                        type: "manual",
+                                        message: "ערך Cash-out לא יכול להיות שלילי"
+                                      });
+                                    } else {
+                                      form.clearErrors("cash_out");
+                                    }
+                                  }}
                                 />
                                 <DollarSign className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                               </div>
                             </FormControl>
+                            <FormDescription className="text-sm mt-1">
+                              סכום היציאה מהמשחק או הסכום הסופי איתו סיימת
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1049,10 +1172,19 @@ export default function AddGameForm({
                     </div>
                     
                     {profit !== null && (
-                      <div className={`mt-4 p-3 rounded-md text-center ${profit > 0 ? 'bg-green-100 text-green-800' : profit < 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100'}`}>
-                        <p className="font-medium">
-                          {profit > 0 ? 'רווח:' : profit < 0 ? 'הפסד:' : 'איזון:'} {profit > 0 ? '+' : ''}{profit} ₪
-                        </p>
+                      <div className={`mt-4 p-4 rounded-md text-center ${profit > 0 ? 'bg-green-100 text-green-800 border border-green-200' : profit < 0 ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-gray-100 border border-gray-200'}`}>
+                        <div className="flex items-center justify-center gap-2">
+                          {profit > 0 ? (
+                            <span className="text-green-600 text-lg">↑</span>
+                          ) : profit < 0 ? (
+                            <span className="text-red-600 text-lg">↓</span>
+                          ) : (
+                            <span className="text-gray-600 text-lg">=</span>
+                          )}
+                          <p className="font-medium text-lg">
+                            {profit > 0 ? 'רווח:' : profit < 0 ? 'הפסד:' : 'איזון:'} {profit > 0 ? '+' : ''}{profit} ₪
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1073,9 +1205,12 @@ export default function AddGameForm({
                             <Textarea 
                               placeholder="הערות על המשחק, אירועים מיוחדים, תובנות..." 
                               {...field} 
-                              className="min-h-32 text-lg"
+                              className="min-h-32 text-lg bg-white"
                             />
                           </FormControl>
+                          <FormDescription className="text-sm mt-1">
+                            מידע נוסף שתרצה לזכור על המשחק הזה
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1087,7 +1222,7 @@ export default function AddGameForm({
                     control={form.control}
                     name="add_to_calendar"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-0 space-x-reverse space-y-0 rounded-md border p-4 shadow-sm">
+                      <FormItem className="flex flex-row items-start space-x-0 space-x-reverse space-y-0 rounded-md border p-4 shadow-sm bg-white">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
@@ -1105,23 +1240,68 @@ export default function AddGameForm({
                     )}
                   />
                   
-                  <Button 
-                    type="submit" 
-                    className="w-full text-lg py-6" 
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full"></div>
-                        <span>שומר משחק...</span>
+                  {/* סקשן סיכום ושליחה */}
+                  <div className="bg-white p-5 rounded-lg border shadow-sm mt-6">
+                    <h3 className="text-lg font-medium mb-4 text-center">סיכום המשחק</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <div className="p-3 rounded border bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-1">שם המשחק:</p>
+                        <p className="font-medium">{form.getValues("game_type") || "-"}</p>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2 justify-center">
-                        <Check className="h-5 w-5" />
-                        <span>שמור משחק</span>
+                      <div className="p-3 rounded border bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-1">תאריך:</p>
+                        <p className="font-medium">{form.getValues("date") || "-"}</p>
+                      </div>
+                      <div className="p-3 rounded border bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-1">פלטפורמה:</p>
+                        <p className="font-medium">{platformOptions.find(o => o.value === form.getValues("platform"))?.label || "-"}</p>
+                      </div>
+                      <div className="p-3 rounded border bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-1">פורמט:</p>
+                        <p className="font-medium">{formatOptions.find(o => o.value === form.getValues("format"))?.label || "-"}</p>
+                      </div>
+                      <div className="p-3 rounded border bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-1">Buy-in:</p>
+                        <p className="font-medium">{form.getValues("buy_in") ? `${form.getValues("buy_in")} ₪` : "-"}</p>
+                      </div>
+                      <div className="p-3 rounded border bg-muted/10">
+                        <p className="text-sm text-muted-foreground mb-1">Cash-out:</p>
+                        <p className="font-medium">{form.getValues("cash_out") ? `${form.getValues("cash_out")} ₪` : "-"}</p>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full text-lg py-6" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full"></div>
+                          <span>שומר משחק...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 justify-center">
+                          <Check className="h-5 w-5" />
+                          <span>שמור משחק</span>
+                        </div>
+                      )}
+                    </Button>
+                    
+                    {Object.keys(form.formState.errors).length > 0 && (
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-red-600 font-medium">נא לתקן את השגיאות הבאות:</p>
+                        <ul className="list-disc list-inside text-sm mt-1">
+                          {Object.entries(form.formState.errors).map(([key, error]) => (
+                            <li key={key} className="text-red-600">
+                              {error?.message}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
-                  </Button>
+                  </div>
                 </form>
               </Form>
             </CardContent>
